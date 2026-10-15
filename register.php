@@ -6,19 +6,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $name  = trim($_POST["name"]);
     $email = trim($_POST["email"]);
     $pass  = $_POST["password"];
-    $birth = $_POST["birth_date"] ?: null;   // اختياري
+    $birth = $_POST["birth_date"] ?: null;   // اختياري: يصبح NULL إذا تُرك فارغاً
     $bio   = trim($_POST["bio"]) ?: null;    // اختياري
 
-    // نتأكد انو الايميل مش مكرر
+    // التأكد أن الإيميل غير مكرر
     $check = $conn->prepare("SELECT id FROM users WHERE email = ?");
     $check->bind_param("s", $email);
     $check->execute();
-    $check->store_result();
+    $check->store_result(); // ضروري قبل استخدام num_rows
 
     if ($check->num_rows > 0) {
         $msg = "<p class='error'>This email is already registered.</p>";
     } else {
-        $hash = password_hash($pass, PASSWORD_DEFAULT);   // تشفير الباسورد
+        // تشفير كلمة المرور قبل تخزينها (لا تُخزَّن كنص عادي أبداً)
+        $hash = password_hash($pass, PASSWORD_DEFAULT);
+
+        // prepared statement لمنع SQL Injection
         $stmt = $conn->prepare("INSERT INTO users (name, email, password, bio, birth_date) VALUES (?, ?, ?, ?, ?)");
         $stmt->bind_param("sssss", $name, $email, $hash, $bio, $birth);
         $stmt->execute();

@@ -6,18 +6,22 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $email = trim($_POST["email"]);
     $pass  = $_POST["password"];
 
-    // AND: الايميل صح + الحساب فعّال
+    // prepared statement لمنع SQL Injection + شرط أن الحساب فعّال
     $stmt = $conn->prepare("SELECT id, name, password FROM users WHERE email = ? AND is_active = 1");
     $stmt->bind_param("s", $email);
     $stmt->execute();
     $user = $stmt->get_result()->fetch_assoc();
 
+    // مقارنة كلمة المرور مع الهاش المخزّن
     if ($user && password_verify($pass, $user["password"])) {
-        $_SESSION["user_id"]   = $user["id"];     // نحفظ حالة تسجيل الدخول
+        // حفظ حالة تسجيل الدخول في الجلسة
+        $_SESSION["user_id"]   = $user["id"];
         $_SESSION["user_name"] = $user["name"];
         header("Location: users.php");
-        exit;
+        exit; // إيقاف السكربت بعد التحويل
     }
+
+    // رسالة موحّدة لا تكشف أي الحقلين الخطأ
     $msg = "<p class='error'>Incorrect email or password.</p>";
 }
 ?>

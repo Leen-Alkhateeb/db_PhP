@@ -1,5 +1,5 @@
 <?php
 session_start();
-session_destroy();
+session_destroy(); // حذف بيانات الجلسة بالكامل (تسجيل الخروج)
 header("Location: login.php");
-exit;
+exit; // إيقاف السكربت بعد التحويل
