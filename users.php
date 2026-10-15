@@ -1,7 +1,7 @@
 <?php
 require "config.php";
 
-// صفحة محمية: لازم يكون المستخدم مسجّل دخول
+// لازم يكون مسجل دخول
 if (!isset($_SESSION["user_id"])) {
     header("Location: login.php");
     exit;
@@ -9,39 +9,42 @@ if (!isset($_SESSION["user_id"])) {
 $id = $_SESSION["user_id"];
 $msg = "";
 
-/* ---- UPDATE و DELETE مع WHERE (على حساب المستخدم الحالي فقط) ---- */
+// تعديل الاسم وحذف الحساب
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+
+    // تعديل الاسم
     if (isset($_POST["new_name"])) {
         $stmt = $conn->prepare("UPDATE users SET name = ? WHERE id = ?");
         $stmt->bind_param("si", $_POST["new_name"], $id);
         $stmt->execute();
-        $_SESSION["user_name"] = $_POST["new_name"]; // تحديث الاسم المعروض في الجلسة
+        $_SESSION["user_name"] = $_POST["new_name"]; // عشان الاسم يتغير فوق كمان
         $msg = "<p class='success'>Name updated.</p>";
     }
+
+    // حذف الحساب
     if (isset($_POST["delete_me"])) {
         $stmt = $conn->prepare("DELETE FROM users WHERE id = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
-        session_destroy(); // إنهاء الجلسة بعد حذف الحساب
+        session_destroy();
         header("Location: register.php");
         exit;
     }
 }
 
-/* ---- الفلاتر (كلها اختيارية) ---- */
-$search = "%" . trim($_GET["search"] ?? "") . "%";                    // LIKE: بحث جزئي
-$from   = ($_GET["from"] ?? "") ?: "2000-01-01";                      // BETWEEN: قيم افتراضية واسعة
+// الفلاتر
+$search = "%" . trim($_GET["search"] ?? "") . "%";                    // للبحث بـ LIKE
+$from   = ($_GET["from"] ?? "") ?: "2000-01-01";                      // لو ما حدد تاريخ بنحط قيمة واسعة
 $to     = ($_GET["to"] ?? "") ?: "2100-12-31";
 $roleF  = $_GET["role"] ?? "all";
-// قائمة بيضاء للأدوار: القيمة تُحدَّد من مصفوفة ثابتة وليس من إدخال المستخدم
-$roleIn = ["all" => "1, 2", "admin" => "1", "member" => "2"][$roleF] ?? "1, 2";   // IN
-$order  = ($_GET["order"] ?? "ASC") === "DESC" ? "DESC" : "ASC";      // ORDER BY: قيمتان فقط
+$roleIn = ["all" => "1, 2", "admin" => "1", "member" => "2"][$roleF] ?? "1, 2";   // الدور
+$order  = ($_GET["order"] ?? "ASC") === "DESC" ? "DESC" : "ASC";      // الترتيب
 
-// LIMIT: تحويل لرقم صحيح + السماح بقيم محددة فقط (لأنه لا يُربط بـ bind_param هنا)
+// عدد الصفوف، بس 5 او 10 او 20
 $limit = (int)($_GET["limit"] ?? 10);
 if (!in_array($limit, [5, 10, 20])) {
     $limit = 10;
 }
 
-/* ---- SELECT مع alias + JOIN + AND/OR + ORDER BY + LIMIT (بدون password) ---- */
-// المتغيرات المدمجة مباشرة
+// الاستعلام الرئيسي: بجيب اليوزرز مع اسم الدور (بدون الباسورد)
+// $roleIn و $order و $limit بنحطهم مباشرة لانهم قيم محددة من عندنا مش من اليوزر

@@ -2,26 +2,27 @@
 require "config.php";
 $msg = "";
 
+// اذا ضغط على زر الدخول
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $email = trim($_POST["email"]);
     $pass  = $_POST["password"];
 
-    // prepared statement لمنع SQL Injection + شرط أن الحساب فعّال
+    // بدور على اليوزر بالايميل وبشرط حسابه فعّال
     $stmt = $conn->prepare("SELECT id, name, password FROM users WHERE email = ? AND is_active = 1");
     $stmt->bind_param("s", $email);
     $stmt->execute();
     $user = $stmt->get_result()->fetch_assoc();
 
-    // مقارنة كلمة المرور مع الهاش المخزّن
+    // اذا لقيناه والباسورد صح
     if ($user && password_verify($pass, $user["password"])) {
-        // حفظ حالة تسجيل الدخول في الجلسة
+        // بنخزن بياناته بالسيشن عشان نعرف انه مسجل دخول
         $_SESSION["user_id"]   = $user["id"];
         $_SESSION["user_name"] = $user["name"];
         header("Location: users.php");
-        exit; // إيقاف السكربت بعد التحويل
+        exit;
     }
 
-    // رسالة موحّدة لا تكشف أي الحقلين الخطأ
+    // لو وصلنا هون يعني في غلط
     $msg = "<p class='error'>Incorrect email or password.</p>";
 }
 ?>
@@ -36,6 +37,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <body>
 <div class="box">
     <h2>Login</h2>
+    <!-- رسالة الخطأ بتطلع هون -->
     <?= $msg ?>
     <form method="POST">
         <input type="email" name="email" placeholder="Email" required>

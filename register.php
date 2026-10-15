@@ -2,26 +2,27 @@
 require "config.php";
 $msg = "";
 
+// اذا ضغط على زر التسجيل
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $name  = trim($_POST["name"]);
     $email = trim($_POST["email"]);
     $pass  = $_POST["password"];
-    $birth = $_POST["birth_date"] ?: null;   // اختياري: يصبح NULL إذا تُرك فارغاً
-    $bio   = trim($_POST["bio"]) ?: null;    // اختياري
+    $birth = $_POST["birth_date"] ?: null;   // اذا تركه فاضي بينحط NULL
+    $bio   = trim($_POST["bio"]) ?: null;    // نفس الشي
 
-    // التأكد أن الإيميل غير مكرر
+    // بشوف اذا الايميل مسجل من قبل
     $check = $conn->prepare("SELECT id FROM users WHERE email = ?");
     $check->bind_param("s", $email);
     $check->execute();
-    $check->store_result(); // ضروري قبل استخدام num_rows
+    $check->store_result(); // لازم قبل num_rows
 
     if ($check->num_rows > 0) {
         $msg = "<p class='error'>This email is already registered.</p>";
     } else {
-        // تشفير كلمة المرور قبل تخزينها (لا تُخزَّن كنص عادي أبداً)
+        // بشفر الباسورد قبل ما نخزنه
         $hash = password_hash($pass, PASSWORD_DEFAULT);
 
-        // prepared statement لمنع SQL Injection
+        // بضيف اليوزر الجديد
         $stmt = $conn->prepare("INSERT INTO users (name, email, password, bio, birth_date) VALUES (?, ?, ?, ?, ?)");
         $stmt->bind_param("sssss", $name, $email, $hash, $bio, $birth);
         $stmt->execute();
@@ -40,6 +41,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <body>
 <div class="box">
     <h2>Register</h2>
+    <!-- الرسالة بتطلع هون -->
     <?= $msg ?>
     <form method="POST">
         <input type="text" name="name" placeholder="Name" required>
